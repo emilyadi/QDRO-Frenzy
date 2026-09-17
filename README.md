@@ -11,8 +11,13 @@ desktops, no install.
 3. Catch **10** good filings to qualify the order. Every catch speeds the
    docket up a little.
 4. Let **3** good filings hit the floor and the order is rejected.
-5. Catching a deficient filing (`REJECTED`, `MISSING DOB`, `NO COURT STAMP`…)
-   costs you one qualified catch — it never ends the run on its own.
+5. Catching a defective clause costs you one qualified catch — it never ends
+   the run on its own.
+
+Good and bad clauses wear the same manila chip, so reading the clause is the
+game. A clean one reads like *"AP is the former spouse"*; a defective one reads
+like *"AP is P's neighbor"* or *"Transfer the award into an IRA"*. The pools
+live at the top of `assets/game.js`.
 
 Win or lose, **Play Again** returns you to the character select screen.
 

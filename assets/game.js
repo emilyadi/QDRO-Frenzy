@@ -9,18 +9,21 @@
     { key: "emma",     name: "Emma" }
   ];
 
-  // Both pools wear the same manila chip on purpose: reading the filing is the game.
+  // Both pools wear the same manila chip on purpose: reading the clause is the game.
   var GOOD = [
-    "Qualified", "Signed Order", "Plan Approved", "Certified Copy",
-    "Court Stamped", "Alternate Payee", "Survivor Benefit", "Model Order",
-    "Segregated Account", "Clean Draft", "Judge Signed", "Admin Sign-Off",
-    "Pre-Approved", "Accepted"
+    "Made pursuant to Ohio domestic relations law",
+    "AP is the former spouse",
+    "Split the Plan's fees and costs 50/50",
+    "Reduce award to the extent it exceeds the vested account balance as of segregation",
+    "A flat $20,000 value as of segregation"
   ];
   var BAD = [
-    "Rejected", "Unsigned", "Missing DOB", "Wrong Plan Name",
-    "Deficiency Letter", "No Court Stamp", "Ambiguous Terms", "Expired Order",
-    "Outstanding Loan", "Bad SSN", "Duplicate Filing", "Stale Valuation",
-    "Returned", "Needs Amendment"
+    "100% of the account balance, unreduced for loans",
+    "AP is P's neighbor",
+    "Gross up the child support award for taxes",
+    "Transfer the award into an IRA",
+    "Distribute the award to AP's attorney",
+    "50% as of 9/1/1994"
   ];
 
   var GOAL = 10;      // good filings needed to win
@@ -34,7 +37,13 @@
   try { muted = localStorage.getItem("qdro-muted") === "1"; } catch (e) {}
 
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+  var lastDrawn = {};
+  function pick(list, poolName) {
+    var i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === lastDrawn[poolName]) i = (i + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
+    lastDrawn[poolName] = i;
+    return list[i];
+  }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -132,9 +141,9 @@
       meter: meter, drops: drops,
       items: [],
       caught: 0, dropped: 0,
-      speed: 170,          // px per second, before the multiplier
+      speed: 120,          // px per second, before the multiplier
       mult: 1,
-      spawnEvery: 1250,    // ms
+      spawnEvery: 1600,    // ms
       sinceSpawn: 600,
       x: 0, targetX: 0,
       keyLeft: false, keyRight: false,
@@ -257,7 +266,7 @@
 
   function spawn() {
     var isGood = Math.random() < 0.55;
-    var node = el("div", "filing", pick(isGood ? GOOD : BAD));
+    var node = el("div", "filing", isGood ? pick(GOOD, "good") : pick(BAD, "bad"));
     node.style.transform = "translate(0px,-200px)";
     G.field.appendChild(node);
     var w = node.offsetWidth, h = node.offsetHeight;
@@ -325,8 +334,8 @@
         remove(it, true);
         if (it.good) {
           G.caught++;
-          G.mult *= 1.085;                                   // the docket speeds up
-          G.spawnEvery = Math.max(520, G.spawnEvery * 0.94);
+          G.mult *= 1.07;                                   // the docket speeds up
+          G.spawnEvery = Math.max(760, G.spawnEvery * 0.95);
           toast("+1", "good", it.x, it.y);
         } else {
           // Deficient filing: a real setback that still leaves the stated

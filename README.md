@@ -1,29 +1,55 @@
 # QDRO Frenzy
 
-A browser game: filings rain down on the intake desk, and you catch the clean
-ones in the APPROVED box your drafter holds overhead. Runs on phones and
-desktops, no install.
+A browser game: you work the review desk. Orders land in front of you one at a
+time, each carrying 3–4 clauses. Read them, then drag the right stamp onto the
+order before the clock runs out. Runs on phones and desktops, no install.
 
 ## How to play
 
-1. Pick one of four drafters — Rhiannon, Emily, Heather, or Emma.
-2. Move with touch-drag, the mouse, or the arrow keys.
-3. Catch **10** good filings to qualify the order. Every catch speeds the
-   docket up a little.
-4. Let **3** good filings hit the floor and the order is rejected.
-5. Catching a defective clause costs you one qualified catch — it never ends
-   the run on its own.
+1. Pick one of four reviewers — Rhiannon, Emily, Heather, or Emma.
+2. Read every clause on the order.
+   - All clauses clean → drag **Qualified** onto the order.
+   - Any clause defective → drag **Rejected**.
+3. Clear **8** orders correctly before the clock hits zero to win.
+4. A wrong stamp costs **6 seconds**, and the order shows you what you missed —
+   the defect you stamped past gets flagged in red, or you are told the order
+   was clean.
 
-Good and bad clauses wear the same manila chip, so reading the clause is the
-game. A clean one reads like *"AP is the former spouse"*; a defective one reads
-like *"AP is P's neighbor"* or *"Transfer the award into an IRA"*. The pools
-live at the top of `assets/game.js`.
+Dragging is the intended control; tapping a stamp or pressing **Q** / **R**
+also works, so the game is playable by keyboard. Win or lose, **Play Again**
+returns you to the reviewer select screen.
 
-Win or lose, **Play Again** returns you to the character select screen.
+## Tuning
+
+The knobs sit at the top of `assets/game.js`:
+
+```js
+var GOAL = 8;             // orders to clear
+var SECONDS = 100;        // on the clock
+var WRONG_PENALTY = 6;    // seconds lost per mis-stamp
+```
+
+## The clause bank
+
+`CLAUSES` in `assets/game.js` is the entire content of the game. Each entry is:
+
+```js
+{ text: "…", good: true | false, topics: ["fees"] }
+```
+
+`good: false` marks a defect, so any order containing one must be rejected.
+`topics` keeps two clauses about the same subject off a single order — it is
+why an order never cites two states, never carries two valuation dates, and
+never pairs a clause with its own negation. Add clauses freely; give a new one
+the topic of whatever it speaks to.
+
+Orders are drawn from a shuffled queue that keeps clean and defective orders
+evenly mixed, and a short recent-use list keeps the same clause from appearing
+on back-to-back orders.
 
 ## Running it
 
-It is a static site with no build step. Open `index.html`, or serve the folder:
+A static site with no build step. Open `index.html`, or serve the folder:
 
 ```sh
 python3 -m http.server 8000   # then visit http://localhost:8000
@@ -37,10 +63,8 @@ To publish on GitHub Pages: Settings → Pages → deploy from the branch root.
 index.html          full page (GitHub Pages / local)
 artifact.html       body-only shell for publishing as a Claude artifact
 assets/game.css     styling and design tokens
-assets/game.js      game logic — both shells load this
-assets/portraits/   character-select art
-assets/sprites/     in-game sprites, cut from the supplied sheet
+assets/game.js      game logic and clause bank — both shells load this
+assets/portraits/   reviewer select art
+assets/sprites/     desk sprites, cut from the supplied sheet
 assets/audio/       background music
 ```
-
-Art and music were supplied as PDFs/MP3 and extracted into `assets/`.

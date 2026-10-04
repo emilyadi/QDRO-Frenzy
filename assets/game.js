@@ -1,4 +1,4 @@
-/* QDRO Frenzy — catch the clean filings, let the deficient ones hit the floor. */
+/* QDRO Frenzy — review the order, drag the right stamp, beat the clock. */
 (function () {
   "use strict";
 
@@ -9,58 +9,74 @@
     { key: "emma",     name: "Emma" }
   ];
 
-  // Both pools wear the same manila chip on purpose: reading the clause is the game.
-  var GOOD = [
-    "Made pursuant to Ohio domestic relations law",
-    "AP is the former spouse",
-    "Split the Plan's fees and costs 50/50",
-    "Reduce award to the extent it exceeds the vested account balance as of segregation",
-    "A flat $20,000 value as of segregation"
-  ];
-  var BAD = [
-    "100% of the account balance, unreduced for loans",
-    "AP is P's neighbor",
-    "Gross up the child support award for taxes",
-    "Transfer the award into an IRA",
-    "Distribute the award to AP's attorney",
-    "50% as of 9/1/1994"
+  var GOAL = 8;             // orders to process correctly
+  var SECONDS = 100;        // on the clock
+  var WRONG_PENALTY = 6;    // seconds lost for a mis-stamp
+
+  /* --------------------------------------------------------- clause bank --
+     good:false means the clause is a defect, so the order must be REJECTED.
+     `topics` keeps two clauses on the same subject off one order, so an order
+     never cites two states or carries two different valuation dates.
+     Edit freely — this array is the whole content of the game.              */
+  var CLAUSES = [
+    /* ---- clean clauses ---- */
+    { text: "Alternate Payee is a current spouse and the order is issued pursuant to Arizona domestic relations law.", good: true, topics: ["payee", "jurisdiction"] },
+    { text: "Made pursuant to Ohio domestic relations law.", good: true, topics: ["jurisdiction"] },
+    { text: "The order is issued pursuant to the domestic relations laws of the Navajo Nation.", good: true, topics: ["jurisdiction"] },
+    { text: "The parties shall equally split the Plan's reasonable fees and costs.", good: true, topics: ["fees"] },
+    { text: "The amount awarded will be reduced to the extent it exceeds the Participant's vested account balance on the date of segregation.", good: true, topics: ["reduction"] },
+    { text: "The Participant shall remain responsible for any outstanding Plan loans.", good: true, topics: ["loans"] },
+    { text: "The award shall be taken from the Participant's investments in the 2030 Vanguard Target Date Fund. To the extent insufficient, the remainder shall be taken from all other funds pro rata.", good: true, topics: ["source"] },
+    { text: "A flat $20,000 value as of segregation.", good: true, topics: ["valuation"] },
+
+    /* ---- defects ---- */
+    { text: "The amount awarded will not be reduced to the extent it exceeds the Participant's vested account balance on the date of segregation.", good: false, topics: ["reduction"] },
+    { text: "The amount awarded to the child alternate payee shall be grossed-up for the Participant's tax obligations.", good: false, topics: ["grossup"] },
+    { text: "The Alternate Payee's beneficiary is the individual designated under Plan terms; if non, the Alternate Payee's estate.", good: false, topics: ["beneficiary"] },
+    { text: "The Alternate Payee is the Participant's brother.", good: false, topics: ["payee"] },
+    { text: "The amount awarded equals 56.434% of the Participant's vested account balance valued as of the date of segregation (less outstanding loans).", good: false, topics: ["valuation", "loans"] },
+    { text: "The Alternate Payee is the Participant's neighbor.", good: false, topics: ["payee"] },
+    { text: "100% of the account balance, unreduced for loans.", good: false, topics: ["award", "loans"] },
+    { text: "Transfer the award into an IRA.", good: false, topics: ["distribution"] },
+    { text: "Distribution checks shall be made payable to Murdock Law.", good: false, topics: ["distribution"] },
+    { text: "Distribute the award to the Alternate Payee's attorney.", good: false, topics: ["distribution"] },
+    { text: "50% as of 9/1/1994.", good: false, topics: ["valuation"] }
   ];
 
-  var GOAL = 10;      // good filings needed to win
-  var MAX_DROPS = 3;  // good filings allowed to hit the floor
+  var GOOD = CLAUSES.filter(function (c) { return c.good; });
+  var BAD  = CLAUSES.filter(function (c) { return !c.good; });
 
   var app = document.getElementById("app");
   var audio = new Audio("assets/audio/one-more-life.mp3");
   audio.loop = true;
-  audio.volume = 0.45;
+  audio.volume = 0.4;
   var muted = false;
   try { muted = localStorage.getItem("qdro-muted") === "1"; } catch (e) {}
 
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  var lastDrawn = {};
-  function pick(list, poolName) {
-    var i = Math.floor(Math.random() * list.length);
-    if (list.length > 1 && i === lastDrawn[poolName]) i = (i + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
-    lastDrawn[poolName] = i;
-    return list[i];
-  }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
   }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
 
   /* ------------------------------------------------------ character select */
   function showSelect() {
-    stopLoop();
+    teardown();
     app.innerHTML = "";
     var s = el("div", "screen select");
 
-    s.appendChild(el("p", "eyebrow", "Domestic Relations Order · Intake Desk"));
-    var h1 = el("h1", "wordmark", "QDRO Frenzy");
-    s.appendChild(h1);
-    s.appendChild(el("p", "eyebrow", "Select your drafter"));
+    s.appendChild(el("p", "eyebrow", "Domestic Relations Order · Review Desk"));
+    s.appendChild(el("h1", "wordmark", "QDRO Frenzy"));
+    s.appendChild(el("p", "eyebrow", "Select your reviewer"));
 
     var roster = el("div", "roster");
     CAST.forEach(function (c) {
@@ -70,43 +86,57 @@
       img.src = "assets/portraits/" + c.key + ".png";
       img.alt = c.name;
       b.appendChild(img);
-      b.addEventListener("click", function () { startRound(c); });
+      b.addEventListener("click", function () { startShift(c); });
       roster.appendChild(b);
     });
     s.appendChild(roster);
 
     var tip = el("p", "tagline");
     tip.innerHTML =
-      "Filings rain down on the intake desk. Catch the clean ones in the " +
-      "<b>APPROVED box</b> overhead — catch <b>" + GOAL + "</b> to qualify the order. " +
-      "Every catch speeds the docket up. Let <b>" + MAX_DROPS + "</b> good filings hit the floor " +
-      "and the order is rejected. Grabbing a deficient filing costs you a catch.";
+      "Orders land on your desk one at a time. Read every clause: if they are all clean, " +
+      "drag the <b>Qualified</b> stamp onto the order — if even one clause is defective, " +
+      "drag <b>Rejected</b>. Clear <b>" + GOAL + "</b> orders before the clock runs out. " +
+      "A wrong stamp costs you <b>" + WRONG_PENALTY + "</b> seconds.";
     s.appendChild(tip);
-    s.appendChild(el("p", "eyebrow", "Drag · move the mouse · or use ← →"));
+    s.appendChild(el("p", "eyebrow", "Drag a stamp onto the order · or press Q / R"));
 
     app.appendChild(s);
   }
 
-  /* ------------------------------------------------------------- the round */
-  var G = null; // live round state
+  /* -------------------------------------------------------------- a shift */
+  var G = null;
+  var raf = 0;
 
-  function startRound(character) {
+  function teardown() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    window.removeEventListener("keydown", onKey);
+    G = null;
+  }
+
+  function startShift(character) {
     app.innerHTML = "";
     var screen = el("div", "screen game");
 
     /* HUD */
     var hud = el("div", "hud");
-    var caughtBox = el("div");
-    caughtBox.appendChild(el("span", "label", "Qualified"));
+
+    var clock = el("div", "clockbox");
+    clock.appendChild(el("span", "label", "Time"));
+    var clockRow = el("div", "clockrow");
+    var clockText = el("span", "clocktext", "1:40");
+    var bar = el("div", "timebar");
+    var fill = el("div", "timefill");
+    bar.appendChild(fill);
+    clockRow.appendChild(clockText);
+    clockRow.appendChild(bar);
+    clock.appendChild(clockRow);
+
+    var prog = el("div");
+    prog.appendChild(el("span", "label", "Processed"));
     var meter = el("div", "meter");
     for (var i = 0; i < GOAL; i++) meter.appendChild(el("i"));
-    caughtBox.appendChild(meter);
-
-    var dropBox = el("div");
-    dropBox.appendChild(el("span", "label", "Dropped"));
-    var drops = el("div", "drops");
-    for (var j = 0; j < MAX_DROPS; j++) drops.appendChild(el("i"));
-    dropBox.appendChild(drops);
+    prog.appendChild(meter);
 
     var muteBtn = el("button", "mute");
     muteBtn.type = "button";
@@ -116,54 +146,58 @@
       syncAudio(muteBtn);
     });
 
-    hud.appendChild(caughtBox);
-    hud.appendChild(dropBox);
+    hud.appendChild(clock);
+    hud.appendChild(prog);
     hud.appendChild(el("div", "spacer"));
     hud.appendChild(muteBtn);
     screen.appendChild(hud);
 
-    /* field */
-    var field = el("div", "field");
-    var ground = el("div", "ground");
-    var zone = el("div", "catchzone");
-    var sprite = el("img", "player");
-    sprite.src = "assets/sprites/" + character.key + ".png";
-    sprite.alt = character.name;
-    field.appendChild(ground);
-    field.appendChild(zone);
-    field.appendChild(sprite);
-    screen.appendChild(field);
+    /* desk scene */
+    var office = el("div", "office");
+    var clerk = el("img", "clerk");
+    clerk.src = "assets/sprites/" + character.key + ".png";
+    clerk.alt = character.name;
+    office.appendChild(clerk);
+
+    var desk = el("div", "desk");
+    var papers = el("div", "papers");
+    desk.appendChild(papers);
+
+    var tray = el("div", "tray");
+    var stampQ = makeStamp("qualified", "Qualified");
+    var stampR = makeStamp("rejected", "Rejected");
+    tray.appendChild(stampQ);
+    tray.appendChild(stampR);
+    desk.appendChild(tray);
+
+    office.appendChild(desk);
+    screen.appendChild(office);
     app.appendChild(screen);
 
     G = {
       character: character,
-      field: field, sprite: sprite, zone: zone,
-      meter: meter, drops: drops,
-      items: [],
-      caught: 0, dropped: 0,
-      speed: 120,          // px per second, before the multiplier
-      mult: 1,
-      spawnEvery: 1600,    // ms
-      sinceSpawn: 600,
-      x: 0, targetX: 0,
-      keyLeft: false, keyRight: false,
-      w: 0, h: 0, spriteW: 0, spriteH: 0,
-      running: false, last: 0
+      papers: papers, office: office,
+      clockText: clockText, fill: fill, meter: meter,
+      stamps: [stampQ, stampR],
+      done: 0,
+      left: SECONDS,
+      queue: [],
+      recent: [],
+      order: null,
+      card: null,
+      locked: true,
+      last: 0
     };
 
     syncAudio(muteBtn);
-    if (!muted) { var p = audio.play(); if (p && p.catch) p.catch(function () {}); }
+    window.addEventListener("keydown", onKey);
+    bindStamp(stampQ, true);
+    bindStamp(stampR, false);
 
-    measure();
-    G.x = G.w / 2;
-    G.targetX = G.x;
-    placePlayer();
-
-    if (sprite.complete && sprite.naturalWidth) measure();
-    else sprite.addEventListener("load", function () { measure(); placePlayer(); });
-
-    bindControls();
-    countIn();
+    nextOrder();
+    G.locked = false;
+    G.last = performance.now();
+    raf = requestAnimationFrame(tick);
   }
 
   function syncAudio(btn) {
@@ -173,223 +207,231 @@
     else { var p = audio.play(); if (p && p.catch) p.catch(function () {}); }
   }
 
-  function measure() {
-    if (!G) return;
-    var r = G.field.getBoundingClientRect();
-    G.w = r.width;
-    G.h = r.height;
-    G.groundH = parseFloat(getComputedStyle(G.field.querySelector(".ground")).height) || 44;
-    G.spriteH = G.sprite.offsetHeight || 150;
-    var ratio = (G.sprite.naturalWidth && G.sprite.naturalHeight)
-      ? G.sprite.naturalWidth / G.sprite.naturalHeight : 0.42;
-    G.spriteW = G.spriteH * ratio;
-    G.x = Math.min(Math.max(G.x, G.spriteW / 2), Math.max(G.spriteW / 2, G.w - G.spriteW / 2));
+  function makeStamp(kind, label) {
+    var b = el("button", "stamp " + kind);
+    b.type = "button";
+    b.appendChild(el("span", "handle"));
+    b.appendChild(el("span", "plate", label));
+    b.setAttribute("aria-label", "Stamp the order " + label);
+    return b;
   }
 
-  // Catch zone == the APPROVED box the sprite holds overhead.
-  function zoneRect() {
-    var top = G.h - G.groundH - G.spriteH;
+  /* ----------------------------------------------------- building an order */
+  function draw(pool, used) {
+    var ok = pool.filter(function (c) {
+      return !c.topics.some(function (t) { return used[t]; });
+    });
+    var fresh = ok.filter(function (c) { return G.recent.indexOf(c.text) === -1; });
+    var list = fresh.length ? fresh : ok;
+    if (!list.length) return null;
+    var c = list[Math.floor(Math.random() * list.length)];
+    c.topics.forEach(function (t) { used[t] = true; });
+    G.recent.push(c.text);
+    if (G.recent.length > 9) G.recent.shift();
+    return c;
+  }
+
+  function buildOrder() {
+    // A shuffled queue keeps clean and defective orders evenly mixed.
+    if (!G.queue.length) G.queue = shuffle([true, true, true, true, false, false, false, false]);
+    var defective = G.queue.pop();
+    var want = Math.random() < 0.5 ? 3 : 4;
+    var used = {};
+    var picked = [];
+
+    if (defective) {
+      var b = draw(BAD, used);
+      if (b) picked.push(b);
+    }
+    while (picked.length < want) {
+      var g = draw(GOOD, used);
+      if (!g) break;
+      picked.push(g);
+    }
+    shuffle(picked);
+
     return {
-      left: G.x - G.spriteW * 0.31,
-      right: G.x + G.spriteW * 0.31,
-      top: top + G.spriteH * 0.015,
-      bottom: top + G.spriteH * 0.235
+      clauses: picked,
+      defective: defective,
+      caseNo: "DR-" + (2024 + Math.floor(Math.random() * 3)) + "-" +
+              String(Math.floor(Math.random() * 9000) + 1000)
     };
   }
 
-  function placePlayer() {
-    if (!G) return;
-    G.sprite.style.transform = "translateX(" + (G.x - G.spriteW / 2) + "px)";
-    var z = zoneRect();
-    G.zone.style.width = (z.right - z.left) + "px";
-    G.zone.style.height = (z.bottom - z.top) + "px";
-    G.zone.style.transform = "translate(" + z.left + "px," + z.top + "px)";
+  function nextOrder() {
+    G.order = buildOrder();
+    var card = el("div", "order");
+
+    var head = el("div", "orderhead");
+    head.appendChild(el("span", "doctype", "Qualified Domestic Relations Order"));
+    head.appendChild(el("span", "caseno", "Case No. " + G.order.caseNo));
+    card.appendChild(head);
+
+    var list = el("ol", "clauses");
+    G.order.clauses.forEach(function (c) {
+      var li = el("li", null, c.text);
+      if (!c.good) li.dataset.defect = "1";
+      list.appendChild(li);
+    });
+    card.appendChild(list);
+
+    G.papers.appendChild(card);
+    G.card = card;
+    requestAnimationFrame(function () { card.classList.add("in"); });
   }
 
-  /* ------------------------------------------------------------- controls */
-  function onKeyDown(e) {
-    if (!G) return;
-    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { G.keyLeft = true; e.preventDefault(); }
-    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { G.keyRight = true; e.preventDefault(); }
-  }
-  function onKeyUp(e) {
-    if (!G) return;
-    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") G.keyLeft = false;
-    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") G.keyRight = false;
-  }
-  function onPointer(e) {
-    if (!G) return;
-    var r = G.field.getBoundingClientRect();
-    G.targetX = e.clientX - r.left;
-    if (e.pointerType !== "mouse") e.preventDefault();
+  /* ------------------------------------------------------------- stamping */
+  function bindStamp(btn, isQualified) {
+    var drag = null, moved = false, swallowClick = false;
+
+    btn.addEventListener("pointerdown", function (e) {
+      if (G.locked) return;
+      drag = { x: e.clientX, y: e.clientY };
+      moved = false;
+      btn.setPointerCapture(e.pointerId);
+      btn.classList.add("dragging");
+      e.preventDefault();
+    });
+
+    btn.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) moved = true;
+      btn.style.transform = "translate(" + dx + "px," + dy + "px) rotate(-7deg)";
+    });
+
+    function release(e) {
+      if (!drag) return;
+      drag = null;
+      btn.classList.remove("dragging");
+      var over = overOrder(btn);
+      btn.style.transform = "";
+      if (moved) {
+        swallowClick = true;
+        setTimeout(function () { swallowClick = false; }, 0);
+      }
+      if (over && !G.locked) apply(isQualified);
+    }
+    btn.addEventListener("pointerup", release);
+    btn.addEventListener("pointercancel", function () {
+      drag = null;
+      btn.classList.remove("dragging");
+      btn.style.transform = "";
+    });
+
+    // Keyboard and plain taps still work, so the game is playable without a drag.
+    btn.addEventListener("click", function () {
+      if (swallowClick || G.locked) return;
+      apply(isQualified);
+    });
   }
 
-  function bindControls() {
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    G.field.addEventListener("pointermove", onPointer, { passive: false });
-    G.field.addEventListener("pointerdown", onPointer, { passive: false });
-    window.addEventListener("resize", onResize);
-  }
-  function unbindControls() {
-    window.removeEventListener("keydown", onKeyDown);
-    window.removeEventListener("keyup", onKeyUp);
-    window.removeEventListener("resize", onResize);
-  }
-  function onResize() { measure(); placePlayer(); }
-
-  /* ----------------------------------------------------------- round flow */
-  function countIn() {
-    var ov = el("div", "overlay");
-    var n = el("p", "countdown", "3");
-    ov.appendChild(n);
-    G.field.appendChild(ov);
-    var left = 3;
-    var t = setInterval(function () {
-      left--;
-      if (left > 0) { n.textContent = String(left); return; }
-      clearInterval(t);
-      ov.remove();
-      G.running = true;
-      G.last = performance.now();
-      raf = requestAnimationFrame(tick);
-    }, 650);
+  function overOrder(btn) {
+    if (!G.card) return false;
+    var s = btn.getBoundingClientRect();
+    var o = G.card.getBoundingClientRect();
+    var cx = s.left + s.width / 2;
+    var cy = s.top + s.height / 2;
+    return cx > o.left && cx < o.right && cy > o.top && cy < o.bottom;
   }
 
-  var raf = 0;
-  function stopLoop() {
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-    if (G) { G.running = false; unbindControls(); }
-    G = null;
+  function onKey(e) {
+    if (!G || G.locked) return;
+    var k = e.key.toLowerCase();
+    if (k === "q") { apply(true); e.preventDefault(); }
+    if (k === "r") { apply(false); e.preventDefault(); }
   }
 
-  function spawn() {
-    var isGood = Math.random() < 0.55;
-    var node = el("div", "filing", isGood ? pick(GOOD, "good") : pick(BAD, "bad"));
-    node.style.transform = "translate(0px,-200px)";
-    G.field.appendChild(node);
-    var w = node.offsetWidth, h = node.offsetHeight;
-    var x = Math.random() * Math.max(1, G.w - w);
-    G.items.push({ node: node, good: isGood, x: x, y: -h - 10, w: w, h: h });
-  }
+  function apply(isQualified) {
+    G.locked = true;
+    var correct = isQualified !== G.order.defective;
 
-  function toast(text, kind, x, y) {
-    var t = el("div", "toast " + kind, text);
-    t.style.left = x + "px";
-    t.style.top = y + "px";
-    G.field.appendChild(t);
-    setTimeout(function () { t.remove(); }, 720);
-  }
+    var mark = el("div", "impression " + (isQualified ? "qualified" : "rejected"),
+      isQualified ? "Qualified" : "Rejected");
+    G.card.appendChild(mark);
 
-  function refreshHud() {
-    var m = G.meter.children;
-    for (var i = 0; i < m.length; i++) m[i].className = i < G.caught ? "on" : "";
-    var d = G.drops.children;
-    for (var j = 0; j < d.length; j++) d[j].className = j < G.dropped ? "lost" : "";
-  }
-
-  function remove(item, popped) {
-    var idx = G.items.indexOf(item);
-    if (idx > -1) G.items.splice(idx, 1);
-    if (popped) {
-      item.node.style.setProperty("--end", "translate(" + item.x + "px," + item.y + "px)");
-      item.node.classList.add("pop");
-      setTimeout(function () { item.node.remove(); }, 220);
+    if (correct) {
+      G.done++;
+      refreshMeter();
+      flashVerdict("Correct", "good");
     } else {
-      item.node.remove();
+      G.left = Math.max(0, G.left - WRONG_PENALTY);
+      flashVerdict("−" + WRONG_PENALTY + "s", "bad");
+      G.office.classList.add("shake");
+      setTimeout(function () { if (G) G.office.classList.remove("shake"); }, 400);
+      // Show what was missed: the defect they stamped past, or that it was clean.
+      var defect = G.card.querySelector("[data-defect]");
+      if (defect) defect.classList.add("flagged");
+      else G.card.appendChild(el("p", "cleannote", "Every clause was clean."));
     }
+
+    var card = G.card;
+    var hold = correct ? 420 : 1150;   // linger on a miss so the defect registers
+    setTimeout(function () {
+      if (!G) return;
+      card.classList.add("out");
+      setTimeout(function () {
+        if (!G) return;
+        card.remove();
+        if (G.done >= GOAL) return finish(true);
+        if (G.left <= 0) return finish(false);
+        nextOrder();
+        G.locked = false;
+      }, 260);
+    }, hold);
   }
 
+  function flashVerdict(text, kind) {
+    var t = el("div", "verdicttoast " + kind, text);
+    G.office.appendChild(t);
+    setTimeout(function () { t.remove(); }, 800);
+  }
+
+  function refreshMeter() {
+    var m = G.meter.children;
+    for (var i = 0; i < m.length; i++) m[i].className = i < G.done ? "on" : "";
+  }
+
+  /* ----------------------------------------------------------- the clock */
   function tick(now) {
-    if (!G || !G.running) return;
-    var dt = Math.min((now - G.last) / 1000, 0.05);
+    if (!G) return;
+    var dt = Math.min((now - G.last) / 1000, 0.1);
     G.last = now;
+    G.left = Math.max(0, G.left - dt);
 
-    /* move the drafter */
-    var speed = 640 * dt;
-    if (G.keyLeft) G.targetX -= speed;
-    if (G.keyRight) G.targetX += speed;
-    G.targetX = Math.min(Math.max(G.targetX, G.spriteW / 2), Math.max(G.spriteW / 2, G.w - G.spriteW / 2));
-    G.x += (G.targetX - G.x) * Math.min(1, dt * 18);
-    placePlayer();
+    var s = Math.ceil(G.left);
+    G.clockText.textContent = Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
+    G.fill.style.width = (G.left / SECONDS * 100) + "%";
+    G.fill.classList.toggle("low", G.left <= 20);
 
-    /* spawn */
-    G.sinceSpawn += dt * 1000;
-    if (G.sinceSpawn >= G.spawnEvery) { G.sinceSpawn = 0; spawn(); }
-
-    /* fall + resolve */
-    var z = zoneRect();
-    var floor = G.h - G.groundH;
-    for (var i = G.items.length - 1; i >= 0; i--) {
-      var it = G.items[i];
-      it.y += G.speed * G.mult * dt;
-      it.node.style.transform = "translate(" + it.x + "px," + it.y + "px)";
-
-      var cx = it.x + it.w / 2;
-      var caughtIt = it.y + it.h >= z.top && it.y + it.h <= z.bottom + 14 &&
-                     cx >= z.left - 6 && cx <= z.right + 6;
-
-      if (caughtIt) {
-        remove(it, true);
-        if (it.good) {
-          G.caught++;
-          G.mult *= 1.07;                                   // the docket speeds up
-          G.spawnEvery = Math.max(760, G.spawnEvery * 0.95);
-          toast("+1", "good", it.x, it.y);
-        } else {
-          // Deficient filing: a real setback that still leaves the stated
-          // win/lose conditions untouched.
-          G.caught = Math.max(0, G.caught - 1);
-          toast("−1", "bad", it.x, it.y);
-          G.field.classList.add("flash");
-          setTimeout(function () { if (G) G.field.classList.remove("flash"); }, 280);
-        }
-        refreshHud();
-        if (G.caught >= GOAL) return finish(true);
-        continue;
-      }
-
-      if (it.y + it.h >= floor) {
-        if (it.good) {
-          G.dropped++;
-          toast("MISSED", "bad", it.x, floor - 40);
-          refreshHud();
-          remove(it, false);
-          if (G.dropped >= MAX_DROPS) return finish(false);
-          continue;
-        }
-        remove(it, false); // a deficient filing hitting the floor is fine
-        continue;
-      }
-    }
-
+    if (G.left <= 0 && !G.locked) return finish(false);
     raf = requestAnimationFrame(tick);
   }
 
+  /* ---------------------------------------------------------------- ending */
   function finish(won) {
-    var character = G.character, caught = G.caught, dropped = G.dropped;
-    G.running = false;
+    var name = G.character.name, done = G.done, left = Math.ceil(G.left);
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
+    G.locked = true;
 
     var ov = el("div", "overlay");
-    var v = el("h2", "verdict " + (won ? "win" : "lose"),
-      won ? "Order Qualified" : "Order Rejected");
-    ov.appendChild(v);
+    ov.appendChild(el("h2", "verdict " + (won ? "win" : "lose"),
+      won ? "Desk Cleared" : "Time Called"));
 
     var p = el("p", "summary");
     p.innerHTML = won
-      ? "<b>" + character.name + "</b> got all <b>" + GOAL + "</b> clean filings into the box."
-      : "<b>" + character.name + "</b> qualified <b>" + caught + "</b> of <b>" + GOAL +
-        "</b> before <b>" + dropped + "</b> good filings hit the floor.";
+      ? "<b>" + name + "</b> cleared all <b>" + GOAL + "</b> orders with <b>" +
+        left + "s</b> left on the clock."
+      : "<b>" + name + "</b> processed <b>" + done + "</b> of <b>" + GOAL +
+        "</b> before the clock ran out.";
     ov.appendChild(p);
 
     var again = el("button", "btn", "Play Again");
     again.type = "button";
     again.addEventListener("click", showSelect);
     ov.appendChild(again);
-    G.field.appendChild(ov);
+    G.office.appendChild(ov);
     again.focus();
   }
 

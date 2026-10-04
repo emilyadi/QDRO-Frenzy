@@ -201,9 +201,9 @@ button { font: inherit; color: inherit; }
 .clerk {
   position: absolute;
   left: 50%;
-  bottom: 56%;
+  bottom: 52%;
   transform: translateX(-50%);
-  height: clamp(132px, 26vh, 240px);
+  height: clamp(140px, 36vh, 320px);
   width: auto;
   z-index: 1;
   image-rendering: pixelated;

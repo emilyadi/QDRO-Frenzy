@@ -28,6 +28,8 @@
     { text: "The Participant shall remain responsible for any outstanding Plan loans.", good: true, topics: ["loans"] },
     { text: "The award shall be taken from the Participant's investments in the 2030 Vanguard Target Date Fund. To the extent insufficient, the remainder shall be taken from all other funds pro rata.", good: true, topics: ["source"] },
     { text: "A flat $20,000 value as of segregation.", good: true, topics: ["valuation"] },
+    { text: "The Alternate Payee's address is provided under separate cover.", good: true, topics: ["address"] },
+    { text: "The amount awarded shall adjusted for gains and losses from 9/1/2003 to the date of segregation.", good: true, topics: ["gainloss"] },
 
     /* ---- defects ---- */
     { text: "The amount awarded will not be reduced to the extent it exceeds the Participant's vested account balance on the date of segregation.", good: false, topics: ["reduction"] },
@@ -40,7 +42,11 @@
     { text: "Transfer the award into an IRA.", good: false, topics: ["distribution"] },
     { text: "Distribution checks shall be made payable to Murdock Law.", good: false, topics: ["distribution"] },
     { text: "Distribute the award to the Alternate Payee's attorney.", good: false, topics: ["distribution"] },
-    { text: "50% as of 9/1/1994.", good: false, topics: ["valuation"] }
+    { text: "50% as of 9/1/1994.", good: false, topics: ["valuation"] },
+    { text: "To the extent of a conflict between the terms of the Plan and this order, the terms of this order shall control.", good: false, topics: ["conflict"] },
+    { text: "The Alternate Payee is the estate of the Participant's ex-spouse.", good: false, topics: ["payee"] },
+    { text: "The award shall be adjusted for investment gains and losses, but not account expenses.", good: false, topics: ["gainloss"] },
+    { text: "AP is awarded 50% of P's vested account balance (first reduced for outstanding loans) as of 9/1/94, adjusted for gains and losses after that date.", good: false, topics: ["valuation", "loans", "gainloss"] }
   ];
 
   var GOOD = CLAUSES.filter(function (c) { return c.good; });

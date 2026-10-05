@@ -11,7 +11,7 @@
 
   var GOAL = 8;             // orders to process correctly
   var SECONDS = 75;         // on the clock
-  var WRONG_PENALTY = 6;    // seconds lost for a mis-stamp
+  var WRONG_PENALTY = 12;   // seconds lost for a mis-stamp
 
   /* --------------------------------------------------------- clause bank --
      good:false means the clause is a defect, so the order must be REJECTED.
@@ -453,7 +453,8 @@
     return row;
   }
 
-  // The desk goes up: the reviewer detonates and the filings scatter.
+  // The desk goes up: a charge is lit, then the reviewer and the filings go
+  // with it. Built from square blocks on stepped timing so it reads 8-bit.
   function detonate(done) {
     var office = G.office;
     var orect = office.getBoundingClientRect();
@@ -461,27 +462,56 @@
     var cx = crect.left - orect.left + crect.width / 2;
     var cy = crect.top - orect.top + crect.height / 2;
 
-    var blast = el("div", "blast");
-    blast.style.left = cx + "px";
-    blast.style.top = cy + "px";
-    office.appendChild(blast);
+    var tnt = el("div", "tnt");
+    tnt.appendChild(el("span", null, "TNT"));
+    tnt.style.left = cx + "px";
+    tnt.style.top = cy + "px";
+    office.appendChild(tnt);
 
-    G.clerk.classList.add("boom");
-    office.classList.add("shake");
+    setTimeout(function () {
+      if (!G) return;
+      tnt.remove();
 
-    for (var i = 0; i < 30; i++) {
-      var s = el("div", "scrap");
-      var a = Math.random() * Math.PI * 2;
-      var d = 90 + Math.random() * 300;
-      s.style.left = (cx + (Math.random() * 50 - 25)) + "px";
-      s.style.top = (cy + (Math.random() * 50 - 25)) + "px";
-      s.style.setProperty("--tx", Math.cos(a) * d + "px");
-      s.style.setProperty("--ty", (Math.sin(a) * d * 0.65 + 210) + "px");
-      s.style.setProperty("--rot", (Math.random() * 1080 - 540) + "deg");
-      s.style.animationDelay = Math.round(Math.random() * 130) + "ms";
-      office.appendChild(s);
-    }
-    setTimeout(done, 1150);
+      office.appendChild(el("div", "pixflash"));
+
+      var core = el("div", "tntcore");
+      core.style.left = cx + "px";
+      core.style.top = cy + "px";
+      office.appendChild(core);
+
+      for (var ring = 0; ring < 3; ring++) {
+        var count = 8 + ring * 6;
+        for (var i = 0; i < count; i++) {
+          var a = (i / count) * Math.PI * 2 + ring * 0.26;
+          var d = 72 + ring * 64;
+          var blk = el("div", "pixblock");
+          blk.style.left = cx + "px";
+          blk.style.top = cy + "px";
+          blk.style.setProperty("--bx", Math.round(Math.cos(a) * d) + "px");
+          blk.style.setProperty("--by", Math.round(Math.sin(a) * d) + "px");
+          blk.style.animationDelay = (ring * 80) + "ms";
+          office.appendChild(blk);
+        }
+      }
+
+      G.clerk.classList.add("boom");
+      office.classList.add("shake");
+
+      for (var s = 0; s < 30; s++) {
+        var sc = el("div", "scrap");
+        var sa = Math.random() * Math.PI * 2;
+        var sd = 90 + Math.random() * 300;
+        sc.style.left = (cx + (Math.random() * 50 - 25)) + "px";
+        sc.style.top = (cy + (Math.random() * 50 - 25)) + "px";
+        sc.style.setProperty("--tx", Math.cos(sa) * sd + "px");
+        sc.style.setProperty("--ty", (Math.sin(sa) * sd * 0.65 + 210) + "px");
+        sc.style.setProperty("--rot", (Math.random() * 1080 - 540) + "deg");
+        sc.style.animationDelay = Math.round(Math.random() * 130) + "ms";
+        office.appendChild(sc);
+      }
+
+      setTimeout(done, 1000);
+    }, 430);
   }
 
   function finish(won) {

@@ -11,7 +11,7 @@ order before the clock runs out. Runs on phones and desktops, no install.
    - All clauses clean → drag **Qualified** onto the order.
    - Any clause defective → drag **Rejected**.
 3. Clear **8** orders correctly before the clock hits zero to win.
-4. A wrong stamp costs **6 seconds**, and the order shows you what you missed —
+4. A wrong stamp costs **12 seconds**, and the order shows you what you missed —
    the defect you stamped past gets flagged in red, or you are told the order
    was clean.
 
@@ -29,7 +29,7 @@ The knobs sit at the top of `assets/game.js`:
 ```js
 var GOAL = 8;             // orders to clear
 var SECONDS = 75;         // on the clock
-var WRONG_PENALTY = 6;    // seconds lost per mis-stamp
+var WRONG_PENALTY = 12;   // seconds lost per mis-stamp
 ```
 
 ## The clause bank

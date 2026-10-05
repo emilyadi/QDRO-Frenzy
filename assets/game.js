@@ -10,7 +10,7 @@
   ];
 
   var GOAL = 8;             // orders to process correctly
-  var SECONDS = 100;        // on the clock
+  var SECONDS = 75;         // on the clock
   var WRONG_PENALTY = 6;    // seconds lost for a mis-stamp
 
   /* --------------------------------------------------------- clause bank --
@@ -30,6 +30,8 @@
     { text: "A flat $20,000 value as of segregation.", good: true, topics: ["valuation"] },
     { text: "The Alternate Payee's address is provided under separate cover.", good: true, topics: ["address"] },
     { text: "The amount awarded shall adjusted for gains and losses from 9/1/2003 to the date of segregation.", good: true, topics: ["gainloss"] },
+    { text: "The Alternate Payee is the Participant's child who is 20 years old.", good: true, topics: ["payee"] },
+    { text: "The amount awarded is a flat $50,000 of the P's vested account balance, valued as of 4/2/2021, adjusted for gains and losses after that date. The Participant has no outstanding loans.", good: true, topics: ["valuation", "gainloss", "loans"] },
 
     /* ---- defects ---- */
     { text: "The amount awarded will not be reduced to the extent it exceeds the Participant's vested account balance on the date of segregation.", good: false, topics: ["reduction"] },
@@ -39,21 +41,23 @@
     { text: "The amount awarded equals 56.434% of the Participant's vested account balance valued as of the date of segregation (less outstanding loans).", good: false, topics: ["valuation", "loans"] },
     { text: "The Alternate Payee is the Participant's neighbor.", good: false, topics: ["payee"] },
     { text: "100% of the account balance, unreduced for loans.", good: false, topics: ["award", "loans"] },
-    { text: "Transfer the award into an IRA.", good: false, topics: ["distribution"] },
+    { text: "The award will be transferred into an IRA for the Alternate Payee.", good: false, topics: ["distribution"] },
     { text: "Distribution checks shall be made payable to Murdock Law.", good: false, topics: ["distribution"] },
     { text: "Distribute the award to the Alternate Payee's attorney.", good: false, topics: ["distribution"] },
     { text: "50% as of 9/1/1994.", good: false, topics: ["valuation"] },
     { text: "To the extent of a conflict between the terms of the Plan and this order, the terms of this order shall control.", good: false, topics: ["conflict"] },
     { text: "The Alternate Payee is the estate of the Participant's ex-spouse.", good: false, topics: ["payee"] },
     { text: "The award shall be adjusted for investment gains and losses, but not account expenses.", good: false, topics: ["gainloss"] },
-    { text: "AP is awarded 50% of P's vested account balance (first reduced for outstanding loans) as of 9/1/94, adjusted for gains and losses after that date.", good: false, topics: ["valuation", "loans", "gainloss"] }
+    { text: "AP is awarded 50% of P's vested account balance (first reduced for outstanding loans) as of 9/1/94, adjusted for gains and losses after that date.", good: false, topics: ["valuation", "loans", "gainloss"] },
+    { text: "The Plan shall not permit the Participant to change invests while the order is being reviewed.", good: false, topics: ["investments"] },
+    { text: "This order amends and reverses the order previously approved by the Plan on 8/1/2023. Amounts transferred to that order shall be returned to the Participant's account.", good: false, topics: ["prior"] }
   ];
 
   var GOOD = CLAUSES.filter(function (c) { return c.good; });
   var BAD  = CLAUSES.filter(function (c) { return !c.good; });
 
   var app = document.getElementById("app");
-  var audio = new Audio("assets/audio/one-more-life.mp3");
+  var audio = new Audio("assets/audio/puck-theme.mp3");
   audio.loop = true;
   audio.volume = 0.4;
   var muted = false;
@@ -182,7 +186,7 @@
 
     G = {
       character: character,
-      papers: papers, office: office,
+      papers: papers, office: office, clerk: clerk,
       clockText: clockText, fill: fill, meter: meter,
       stamps: [stampQ, stampR],
       done: 0,
@@ -415,13 +419,85 @@
   }
 
   /* ---------------------------------------------------------------- ending */
+  var CHURRO =
+    '<svg viewBox="0 0 48 104" width="100%" height="100%" aria-hidden="true">' +
+      '<rect x="17" y="90" width="5" height="13" rx="2.5" fill="#6d3b12"/>' +
+      '<rect x="27" y="90" width="5" height="13" rx="2.5" fill="#6d3b12"/>' +
+      '<rect x="1" y="40" width="12" height="5" rx="2.5" fill="#b06f23" transform="rotate(-28 7 42)"/>' +
+      '<rect x="35" y="40" width="12" height="5" rx="2.5" fill="#b06f23" transform="rotate(28 41 42)"/>' +
+      '<rect x="10" y="6" width="28" height="86" rx="14" fill="#c8812f"/>' +
+      '<rect x="13" y="10" width="6" height="78" rx="3" fill="#e0a054" opacity="0.6"/>' +
+      '<rect x="28" y="10" width="7" height="78" rx="3.5" fill="#a9641d" opacity="0.7"/>' +
+      '<path d="M12 56 L36 50 M12 66 L36 60 M12 76 L36 70 M12 85 L36 79" ' +
+        'stroke="#8a4a16" stroke-width="2.6" stroke-linecap="round" fill="none" opacity="0.8"/>' +
+      '<circle cx="18" cy="33" r="3.6" fill="#fff8ec"/>' +
+      '<circle cx="30" cy="33" r="3.6" fill="#fff8ec"/>' +
+      '<circle cx="18.8" cy="33.8" r="1.8" fill="#2a1708"/>' +
+      '<circle cx="30.8" cy="33.8" r="1.8" fill="#2a1708"/>' +
+      '<path d="M19 42 q5 5 10 0" stroke="#2a1708" stroke-width="2.1" fill="none" stroke-linecap="round"/>' +
+      '<circle cx="15" cy="20" r="1.5" fill="#fff5e0"/>' +
+      '<circle cx="33" cy="24" r="1.3" fill="#fff5e0"/>' +
+      '<circle cx="24" cy="15" r="1.4" fill="#fff5e0"/>' +
+      '<circle cx="21" cy="72" r="1.3" fill="#fff5e0"/>' +
+      '<circle cx="31" cy="64" r="1.2" fill="#fff5e0"/>' +
+    '</svg>';
+
+  function churroLine() {
+    var row = el("div", "churros");
+    for (var i = 0; i < 5; i++) {
+      var c = el("div", "churro");
+      c.style.animationDelay = (i * 110) + "ms";
+      c.innerHTML = CHURRO;
+      row.appendChild(c);
+    }
+    return row;
+  }
+
+  // The desk goes up: the reviewer detonates and the filings scatter.
+  function detonate(done) {
+    var office = G.office;
+    var orect = office.getBoundingClientRect();
+    var crect = G.clerk.getBoundingClientRect();
+    var cx = crect.left - orect.left + crect.width / 2;
+    var cy = crect.top - orect.top + crect.height / 2;
+
+    var blast = el("div", "blast");
+    blast.style.left = cx + "px";
+    blast.style.top = cy + "px";
+    office.appendChild(blast);
+
+    G.clerk.classList.add("boom");
+    office.classList.add("shake");
+
+    for (var i = 0; i < 30; i++) {
+      var s = el("div", "scrap");
+      var a = Math.random() * Math.PI * 2;
+      var d = 90 + Math.random() * 300;
+      s.style.left = (cx + (Math.random() * 50 - 25)) + "px";
+      s.style.top = (cy + (Math.random() * 50 - 25)) + "px";
+      s.style.setProperty("--tx", Math.cos(a) * d + "px");
+      s.style.setProperty("--ty", (Math.sin(a) * d * 0.65 + 210) + "px");
+      s.style.setProperty("--rot", (Math.random() * 1080 - 540) + "deg");
+      s.style.animationDelay = Math.round(Math.random() * 130) + "ms";
+      office.appendChild(s);
+    }
+    setTimeout(done, 1150);
+  }
+
   function finish(won) {
+    if (G.over) return;
+    G.over = true;
     var name = G.character.name, done = G.done, left = Math.ceil(G.left);
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     G.locked = true;
+    if (!won) return detonate(function () { if (G) showEnd(won, name, done, left); });
+    showEnd(won, name, done, left);
+  }
 
+  function showEnd(won, name, done, left) {
     var ov = el("div", "overlay");
+    if (won) ov.appendChild(churroLine());
     ov.appendChild(el("h2", "verdict " + (won ? "win" : "lose"),
       won ? "Desk Cleared" : "Time Called"));
 

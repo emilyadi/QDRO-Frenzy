@@ -429,7 +429,74 @@ button { font: inherit; color: inherit; }
 .btn:hover { background: #f2d489; }
 .btn:active { transform: translateY(3px); border-bottom-width: 2px; }
 
+/* ------------------------------------------------------- losing the desk -- */
+.blast {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  z-index: 45;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff 0%, #ffd27a 32%, #e8732f 58%, rgba(232, 90, 47, 0) 72%);
+  animation: blast 620ms ease-out forwards;
+}
+@keyframes blast {
+  from { transform: scale(0.4); opacity: 1; }
+  to   { transform: scale(26); opacity: 0; }
+}
+
+.clerk.boom { animation: clerkboom 620ms ease-out forwards; }
+@keyframes clerkboom {
+  0%   { filter: brightness(4) drop-shadow(0 0 18px #fff); transform: translateX(-50%) scale(1); opacity: 1; }
+  30%  { filter: brightness(7); transform: translateX(-50%) scale(1.22); opacity: 1; }
+  100% { filter: brightness(3); transform: translateX(-50%) scale(2); opacity: 0; }
+}
+
+.scrap {
+  position: absolute;
+  width: 22px;
+  height: 29px;
+  z-index: 46;
+  pointer-events: none;
+  background: var(--paper);
+  border: 1px solid #b4a98f;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  animation: fly 1300ms cubic-bezier(0.18, 0.6, 0.4, 1) forwards;
+}
+@keyframes fly {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  65%  { opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); opacity: 0; }
+}
+
+/* -------------------------------------------------------- winning the day -- */
+.churros {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(4px, 2vw, 16px);
+}
+.churro {
+  width: clamp(30px, 9vw, 52px);
+  height: clamp(64px, 19vw, 112px);
+  transform-origin: 50% 92%;
+  animation: dance 740ms ease-in-out infinite alternate;
+}
+.churro:nth-child(even) { animation-name: dance-alt; }
+@keyframes dance {
+  from { transform: translateY(0) rotate(-13deg); }
+  to   { transform: translateY(-15px) rotate(13deg); }
+}
+@keyframes dance-alt {
+  from { transform: translateY(-15px) rotate(13deg); }
+  to   { transform: translateY(0) rotate(-13deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .order, .impression, .verdicttoast, .office.shake, .pick { transition: none; animation: none; }
+  .order, .impression, .verdicttoast, .office.shake, .pick,
+  .blast, .scrap, .churro, .clerk.boom { transition: none; animation: none; }
   .order { opacity: 1; transform: none; }
+  .blast, .scrap { display: none; }
+  .clerk.boom { opacity: 0; }
 }

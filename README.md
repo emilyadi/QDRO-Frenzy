@@ -15,6 +15,9 @@ order before the clock runs out. Runs on phones and desktops, no install.
    the defect you stamped past gets flagged in red, or you are told the order
    was clean.
 
+Clear the desk and a line of churros dances on the victory screen. Run out the
+clock and your reviewer detonates, scattering the filings across the office.
+
 Dragging is the intended control; tapping a stamp or pressing **Q** / **R**
 also works, so the game is playable by keyboard. Win or lose, **Play Again**
 returns you to the reviewer select screen.
@@ -25,7 +28,7 @@ The knobs sit at the top of `assets/game.js`:
 
 ```js
 var GOAL = 8;             // orders to clear
-var SECONDS = 100;        // on the clock
+var SECONDS = 75;         // on the clock
 var WRONG_PENALTY = 6;    // seconds lost per mis-stamp
 ```
 

@@ -1,7 +1,7 @@
 # QDRO Frenzy
 
 A browser game: you work the review desk. Orders land in front of you one at a
-time, each carrying 3–4 clauses. Read them, then drag the right stamp onto the
+time, each carrying three clauses. Read them, then drag the right stamp onto the
 order before the clock runs out. Runs on phones and desktops, no install.
 
 ## How to play
@@ -28,6 +28,7 @@ The knobs sit at the top of `assets/game.js`:
 
 ```js
 var GOAL = 8;             // orders to clear
+var PER_ORDER = 3;        // clauses on each order
 var SECONDS = 75;         // on the clock
 var WRONG_PENALTY = 12;   // seconds lost per mis-stamp
 ```

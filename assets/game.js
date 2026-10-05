@@ -10,6 +10,7 @@
   ];
 
   var GOAL = 8;             // orders to process correctly
+  var PER_ORDER = 3;        // clauses on each order
   var SECONDS = 75;         // on the clock
   var WRONG_PENALTY = 12;   // seconds lost for a mis-stamp
 
@@ -245,7 +246,7 @@
     // A shuffled queue keeps clean and defective orders evenly mixed.
     if (!G.queue.length) G.queue = shuffle([true, true, true, true, false, false, false, false]);
     var defective = G.queue.pop();
-    var want = Math.random() < 0.5 ? 3 : 4;
+    var want = PER_ORDER;
     var used = {};
     var picked = [];
 
